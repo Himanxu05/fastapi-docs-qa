@@ -124,40 +124,40 @@ checks:
 - whether it cited a chunk from a gold page
 - whether it refused when it shouldn't have, or answered when it should have refused
 
-First run, on a sample (the first 10 answerable questions + all 10 out-of-scope ones), with
-`openai/gpt-oss-20b` on Groq:
+Full run, all 70 questions, `openai/gpt-oss-20b` on Groq (free tier), default setup:
 
-| setup | answered correctly | cited a gold page | wrongly refused | out-of-scope refused |
-|---|---|---|---|---|
-| default (dense + rewrite + gate) | 10/10 | 10/10 | 0/10 | 10/10 |
+| scored | answered correctly | cited a gold page | wrongly refused | out-of-scope refused | refused before the LLM |
+|---|---|---|---|---|---|
+| 70/70 | 55/60 (92%) | 54/60 (90%) | 1/60 | 10/10 | 5/10 |
 
-Of the 10 out-of-scope questions, 4 were stopped by the relevance check without calling the LLM. The
-other 6 (Django, Rails, Spring Boot, React, PyTorch, pizza) reached the LLM and it declined to answer. The
-split varies a little between runs because the query rewrite is generated fresh each time.
+I went through every failure by hand, because a keyword check can mark a good answer wrong:
 
-Median time to first token was about 6 s, most of it waiting on Groq free-tier rate limits.
+- **Real mistakes (3):**
+  - q02 suggested middleware instead of `BackgroundTasks` for running code after the response.
+  - q36 refused a question the docs do answer (changing the docs page title).
+  - q59 gave generic IDE debugger steps and missed the `uvicorn.run()` part the docs describe.
+- **Wrongly marked wrong (2):** q56 and q58 were correct. The check wanted "Body" and "template", and the
+  answers said "body parameter" and "Template".
+- **Correct but uncited (4):** q05, q20, q26 and q40 answered correctly but cited nothing, so they count as
+  missing a gold page.
 
-Second run with `openai/gpt-oss-120b` (default reasoning effort). Groq's free tier allows 200k tokens a day,
-and the run hit that limit after 25 questions:
+So by hand it's 57/60 correct. The most common problem is missing citations, not wrong answers. After this
+run I made the prompt require at least one citation per answer; that change hasn't been measured yet.
 
-| setup | scored | answered correctly | cited a gold page | wrongly refused |
-|---|---|---|---|---|
-| default | 25/60 | 24/25 | 22/25 | 0/25 |
+The 5 out-of-scope questions that got past the relevance check (Django, React, PyTorch, Spring Boot,
+PostgreSQL) were all refused by the LLM.
 
-What went wrong, and what changed because of it:
-- **q05, q16:** correct answers that didn't cite properly. q05 had no citations at all. q16 cited as
-  `【2†L1-L9】`, gpt-oss's own format, which the parser didn't recognise. Both formats are now understood.
-- **q01:** a weaker answer that cited the wrong page. The query rewrite is generated fresh on every run, and
-  this time it steered retrieval elsewhere.
-- **no-rewrite:** most calls failed on the rate limit, but three valid questions (q03, q09, q53) were
-  refused by the relevance check before reaching the LLM. The threshold was tuned with rewriting on, so
-  turning rewriting off makes the check too strict. The two settings have to be tuned together.
-- **Token use:** gpt-oss spends most of its tokens reasoning before it answers. `REASONING_EFFORT=low`
-  (now the default) roughly halves the tokens per question.
-- **The eval script:** it now saves progress after every question and stops cleanly at the daily limit,
-  so a full run can be finished over two days by re-running the same command.
+Time to first token was about 10 s (median), mostly spent waiting on the free tier's 8k tokens/minute limit
+on this model.
 
-A full 70-question run is still to do.
+Earlier, a partial run with `gpt-oss-120b` stopped at Groq's daily token limit after 25 questions (24/25
+correct). It found two bugs, both fixed before the full run:
+- gpt-oss sometimes cites as `【2†L1-L9】` instead of `[2]`; both formats are now understood.
+- The eval script's percentages ignored failed calls. It now saves progress after every question, stops at
+  the daily limit, and resumes on the next run.
+
+The `no-rewrite` comparison is still to run. From the partial run, the relevance threshold is too strict
+when rewriting is off: it blocked three valid questions. The two settings have to be tuned together.
 
 ## Tests
 
