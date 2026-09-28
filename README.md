@@ -144,8 +144,8 @@ I went through every failure by hand, because a keyword check can mark a good an
 So by hand it's 57/60 correct. The most common problem is missing citations, not wrong answers. After this
 run I made the prompt require at least one citation per answer; that change hasn't been measured yet.
 
-The 5 out-of-scope questions that got past the relevance check (Django, React, PyTorch, Spring Boot,
-PostgreSQL) were all refused by the LLM.
+The 5 out-of-scope questions that got past the relevance check (Django, React, Spring Boot, PostgreSQL,
+Rails) were all refused by the LLM.
 
 Time to first token was about 10 s (median), mostly spent waiting on the free tier's 8k tokens/minute limit
 on this model.
