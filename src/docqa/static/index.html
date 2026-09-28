@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask the FastAPI docs</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+  :root { --bg: #fafafa; --fg: #1f2328; --muted: #656d76; --line: #d0d7de; --accent: #05998b; --code: #f3f4f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --accent: #2ec4b6; --code: #161b22; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+  .q { font-weight: 600; margin-top: 28px; }
+  .a { margin-top: 8px; }
+  .a pre { background: var(--code); padding: 12px; border-radius: 6px; overflow-x: auto; }
+  .a code { background: var(--code); padding: 1px 4px; border-radius: 4px; font-size: 13px; }
+  .a pre code { padding: 0; }
+  .cite { color: var(--accent); text-decoration: none; font-size: 12px; vertical-align: super; }
+  .sources { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .sources a { color: var(--muted); }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  form { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--line); padding: 12px 16px; }
+  .row { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; }
+  input { flex: 1; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); font-size: 15px; }
+  button { padding: 10px 16px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .examples button { background: transparent; color: var(--accent); border: 1px solid var(--line); font-size: 13px; padding: 6px 10px; margin: 0 6px 6px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ask the FastAPI docs</h1>
+  <p class="sub">Answers come only from the official FastAPI documentation, with links to the sections they're based on.</p>
+  <div class="examples" id="examples"></div>
+  <div id="log"></div>
+</main>
+<form id="form">
+  <div class="row">
+    <input id="q" placeholder="e.g. How do I upload a file?" autocomplete="off" required minlength="3">
+    <button id="send">Ask</button>
+  </div>
+</form>
+<script>
+const examples = [
+  "How do I make an endpoint accept a JSON payload?",
+  "How can I run code after the response is sent?",
+  "How do I load a ML model once at startup?",
+];
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("q");
+const send = document.getElementById("send");
+
+for (const ex of examples) {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = ex;
+  b.onclick = () => { input.value = ex; form.requestSubmit(); };
+  document.getElementById("examples").append(b);
+}
+
+function render(text, sources) {
+  const byN = Object.fromEntries(sources.map(s => [s.n, s]));
+  let html = DOMPurify.sanitize(marked.parse(text));
+  return html.replace(/\[(\d+)\]/g, (m, n) =>
+    byN[n] ? `<a class="cite" href="${byN[n].url}" target="_blank" title="${byN[n].section}">[${n}]</a>` : m);
+}
+
+async function ask(question) {
+  const block = document.createElement("div");
+  block.innerHTML = `<div class="q"></div><div class="a">…</div><div class="sources"></div><div class="meta"></div>`;
+  block.querySelector(".q").textContent = question;
+  log.append(block);
+  const answerEl = block.querySelector(".a");
+  let sources = [], text = "";
+
+  const res = await fetch("/ask/stream", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({question}),
+  });
+  if (!res.ok) { answerEl.textContent = `Error ${res.status}`; return; }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, {stream: true});
+    const events = buf.split(/\r?\n\r?\n/);
+    buf = events.pop();
+    for (const raw of events) {
+      const ev = /^event: (.*)$/m.exec(raw)?.[1];
+      const data = JSON.parse(/^data: (.*)$/m.exec(raw)?.[1] ?? "null");
+      if (ev === "sources") sources = data;
+      if (ev === "token") { text += data; answerEl.innerHTML = render(text, sources); }
+      if (ev === "error") answerEl.textContent = "Something went wrong: " + data;
+      if (ev === "done") {
+        const used = sources.filter(s => data.cited.includes(s.n));
+        if (used.length) {
+          block.querySelector(".sources").innerHTML = "Sources: " + used.map(s =>
+            `<a href="${s.url}" target="_blank">[${s.n}] ${DOMPurify.sanitize(s.section)}</a>`).join(" · ");
+        }
+        const t = data.timings_ms;
+        block.querySelector(".meta").textContent = data.refused && data.reason === "low_relevance"
+          ? "Nothing relevant found in the docs, so the model wasn't asked."
+          : `search ${Math.round((t.retrieve || 0) + (t.rerank || 0))} ms · first token ${Math.round(t.first_token || 0)} ms`;
+      }
+    }
+  }
+}
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = ""; send.disabled = true;
+  try { await ask(q); } finally { send.disabled = false; input.focus(); }
+};
+</script>
+</body>
+</html>

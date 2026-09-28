@@ -1,0 +1,70 @@
+{"id": "q01", "question": "How do I make an endpoint accept a JSON payload?", "gold": ["tutorial/body"], "must_include": ["BaseModel"], "type": "paraphrase"}
+{"id": "q02", "question": "How can I run a function after returning the response, like sending an email?", "gold": ["tutorial/background-tasks"], "must_include": ["BackgroundTasks"], "type": "paraphrase"}
+{"id": "q03", "question": "My React app on another domain gets blocked when calling my API. How do I allow it?", "gold": ["tutorial/cors"], "must_include": ["CORSMiddleware"], "type": "paraphrase"}
+{"id": "q04", "question": "How do I upload a file to an endpoint?", "gold": ["tutorial/request-files"], "must_include": ["UploadFile"], "type": "keyword"}
+{"id": "q05", "question": "How do I return a 201 status code when an item is created?", "gold": ["tutorial/response-status-code"], "must_include": ["status_code"], "type": "keyword"}
+{"id": "q06", "question": "How can I make sure the password field never shows up in what my API sends back?", "gold": ["tutorial/response-model", "tutorial/extra-models"], "must_include": ["response_model"], "type": "paraphrase"}
+{"id": "q07", "question": "How do I limit a query string to at most 50 characters?", "gold": ["tutorial/query-params-str-validations"], "must_include": ["max_length"], "type": "paraphrase"}
+{"id": "q08", "question": "How do I require a path parameter to be greater than zero?", "gold": ["tutorial/path-params-numeric-validations"], "must_include": ["gt"], "type": "keyword"}
+{"id": "q09", "question": "How do I share the same setup code, like getting a DB session, across many endpoints?", "gold": ["tutorial/dependencies/index", "tutorial/dependencies/dependencies-with-yield", "tutorial/sql-databases"], "must_include": ["Depends"], "type": "paraphrase"}
+{"id": "q10", "question": "How do I close a database connection after the request is done, using a dependency?", "gold": ["tutorial/dependencies/dependencies-with-yield"], "must_include": ["yield"], "type": "paraphrase"}
+{"id": "q11", "question": "How do I load a machine learning model once when the app starts, instead of on every request?", "gold": ["advanced/events"], "must_include": ["lifespan"], "type": "paraphrase"}
+{"id": "q12", "question": "How do I read configuration from environment variables?", "gold": ["advanced/settings", "environment-variables"], "must_include": ["BaseSettings"], "type": "keyword"}
+{"id": "q13", "question": "How do I split a big app into multiple files?", "gold": ["tutorial/bigger-applications"], "must_include": ["APIRouter"], "type": "keyword"}
+{"id": "q14", "question": "How do I return an HTML page instead of JSON?", "gold": ["advanced/custom-response"], "must_include": ["HTMLResponse"], "type": "paraphrase"}
+{"id": "q15", "question": "How do I return a 404 error with a custom message?", "gold": ["tutorial/handling-errors"], "must_include": ["HTTPException"], "type": "keyword"}
+{"id": "q16", "question": "How do I replace a dependency with a fake one in my tests?", "gold": ["advanced/testing-dependencies"], "must_include": ["dependency_overrides"], "type": "paraphrase"}
+{"id": "q17", "question": "How do I write tests for my API?", "gold": ["tutorial/testing"], "must_include": ["TestClient"], "type": "keyword"}
+{"id": "q18", "question": "How do I hash passwords and issue JWT tokens?", "gold": ["tutorial/security/oauth2-jwt"], "must_include": ["JWT"], "type": "keyword"}
+{"id": "q19", "question": "How do I get the currently logged in user inside an endpoint?", "gold": ["tutorial/security/get-current-user"], "must_include": ["get_current_user"], "type": "keyword"}
+{"id": "q20", "question": "How do I build a simple username and password login with OAuth2?", "gold": ["tutorial/security/simple-oauth2"], "must_include": ["OAuth2PasswordRequestForm"], "type": "keyword"}
+{"id": "q21", "question": "How do I accept HTML form fields instead of JSON?", "gold": ["tutorial/request-forms"], "must_include": ["Form"], "type": "paraphrase"}
+{"id": "q22", "question": "How do I read the User-Agent header?", "gold": ["tutorial/header-params"], "must_include": ["Header"], "type": "keyword"}
+{"id": "q23", "question": "How do I set a cookie in the response?", "gold": ["advanced/response-cookies"], "must_include": ["set_cookie"], "type": "keyword"}
+{"id": "q24", "question": "How do I read a cookie sent by the browser?", "gold": ["tutorial/cookie-params"], "must_include": ["Cookie"], "type": "paraphrase"}
+{"id": "q25", "question": "How can I add a header with the processing time to every response?", "gold": ["tutorial/middleware"], "must_include": ["middleware"], "type": "paraphrase"}
+{"id": "q26", "question": "How do I serve images and CSS files from a folder?", "gold": ["tutorial/static-files"], "must_include": ["StaticFiles"], "type": "paraphrase"}
+{"id": "q27", "question": "How do I use WebSockets?", "gold": ["advanced/websockets"], "must_include": ["WebSocket"], "type": "keyword"}
+{"id": "q28", "question": "How do I send back data in pieces as it is generated instead of all at once?", "gold": ["advanced/custom-response", "advanced/stream-data", "tutorial/stream-json-lines", "tutorial/server-sent-events"], "must_include": ["Stream"], "type": "paraphrase"}
+{"id": "q29", "question": "How do I run the app with several worker processes?", "gold": ["deployment/server-workers"], "must_include": ["--workers"], "type": "keyword"}
+{"id": "q30", "question": "How do I build a Docker image for my FastAPI app?", "gold": ["deployment/docker"], "must_include": ["Dockerfile"], "type": "keyword"}
+{"id": "q31", "question": "Should I use def or async def for my path operation functions?", "gold": ["async"], "must_include": ["async def"], "type": "keyword"}
+{"id": "q32", "question": "How do I connect my app to a SQL database?", "gold": ["tutorial/sql-databases"], "must_include": ["SQLModel"], "type": "keyword"}
+{"id": "q33", "question": "How do I update only some fields of an item with PATCH?", "gold": ["tutorial/body-updates"], "must_include": ["exclude_unset"], "type": "keyword"}
+{"id": "q34", "question": "How do I have a list of objects inside my request model?", "gold": ["tutorial/body-nested-models"], "must_include": ["list"], "type": "paraphrase"}
+{"id": "q35", "question": "How can I show example request data in the interactive docs?", "gold": ["tutorial/schema-extra-example"], "must_include": ["examples"], "type": "paraphrase"}
+{"id": "q36", "question": "How do I change the title and description shown on the docs page?", "gold": ["tutorial/metadata"], "must_include": ["title"], "type": "paraphrase"}
+{"id": "q37", "question": "How do I turn off the API docs in production?", "gold": ["how-to/conditional-openapi"], "must_include": ["openapi_url"], "type": "paraphrase"}
+{"id": "q38", "question": "Can I run an existing Flask app inside FastAPI?", "gold": ["advanced/wsgi"], "must_include": ["WSGIMiddleware"], "type": "paraphrase"}
+{"id": "q39", "question": "My app runs behind Nginx under /api/v1 and the docs page breaks. How do I fix that?", "gold": ["advanced/behind-a-proxy"], "must_include": ["root_path"], "type": "paraphrase"}
+{"id": "q40", "question": "How do I restrict a path parameter to a fixed set of values?", "gold": ["tutorial/path-params"], "must_include": ["Enum"], "type": "paraphrase"}
+{"id": "q41", "question": "How do I make a query parameter optional?", "gold": ["tutorial/query-params"], "must_include": ["None"], "type": "keyword"}
+{"id": "q42", "question": "How do I turn a Pydantic model with datetimes into something I can store as JSON in a database?", "gold": ["tutorial/encoder"], "must_include": ["jsonable_encoder"], "type": "paraphrase"}
+{"id": "q43", "question": "How do I apply a dependency to every route in the app?", "gold": ["tutorial/dependencies/global-dependencies"], "must_include": ["dependencies"], "type": "keyword"}
+{"id": "q44", "question": "Can a class be used as a dependency?", "gold": ["tutorial/dependencies/classes-as-dependencies"], "must_include": ["class"], "type": "keyword"}
+{"id": "q45", "question": "How do I return a different status code from the same endpoint depending on what happened?", "gold": ["advanced/additional-status-codes", "advanced/response-change-status-code"], "must_include": ["status"], "type": "paraphrase"}
+{"id": "q46", "question": "How do I protect an endpoint with HTTP Basic auth?", "gold": ["advanced/security/http-basic-auth"], "must_include": ["HTTPBasic"], "type": "keyword"}
+{"id": "q47", "question": "How do I give different users different permissions with OAuth2?", "gold": ["advanced/security/oauth2-scopes"], "must_include": ["scopes"], "type": "paraphrase"}
+{"id": "q48", "question": "How do I get the client's IP address?", "gold": ["advanced/using-request-directly"], "must_include": ["Request"], "type": "paraphrase"}
+{"id": "q49", "question": "How do I render Jinja2 templates?", "gold": ["advanced/templates"], "must_include": ["Jinja2Templates"], "type": "keyword"}
+{"id": "q50", "question": "How can I generate a TypeScript client from my API?", "gold": ["advanced/generate-clients"], "must_include": ["TypeScript"], "type": "keyword"}
+{"id": "q51", "question": "How do I send Server-Sent Events?", "gold": ["tutorial/server-sent-events"], "must_include": ["event"], "type": "keyword"}
+{"id": "q52", "question": "My tests need to call async functions, like an async database. How do I test that?", "gold": ["advanced/async-tests"], "must_include": ["AsyncClient"], "type": "paraphrase"}
+{"id": "q53", "question": "How do I group endpoints into sections in the docs?", "gold": ["tutorial/path-operation-configuration", "tutorial/metadata", "tutorial/bigger-applications"], "must_include": ["tags"], "type": "paraphrase"}
+{"id": "q54", "question": "How do I create a virtual environment for my project?", "gold": ["virtual-environments"], "must_include": ["venv"], "type": "keyword"}
+{"id": "q55", "question": "What changed for FastAPI apps when moving from Pydantic v1 to v2?", "gold": ["how-to/migrate-from-pydantic-v1-to-pydantic-v2"], "must_include": ["v2"], "type": "keyword"}
+{"id": "q56", "question": "How do I receive two different models in the same request body?", "gold": ["tutorial/body-multiple-params"], "must_include": ["Body"], "type": "paraphrase"}
+{"id": "q57", "question": "Can I use UUIDs and datetimes as parameter types?", "gold": ["tutorial/extra-data-types"], "must_include": ["UUID"], "type": "keyword"}
+{"id": "q58", "question": "Is there a starter template with a frontend and a database already set up?", "gold": ["project-generation"], "must_include": ["template"], "type": "paraphrase"}
+{"id": "q59", "question": "How do I run my app from the debugger in my editor?", "gold": ["tutorial/debugging"], "must_include": ["uvicorn"], "type": "paraphrase"}
+{"id": "q60", "question": "How do I accept a file and some form fields in the same request?", "gold": ["tutorial/request-forms-and-files"], "must_include": ["File"], "type": "keyword"}
+{"id": "oos01", "question": "How do I write serializers in Django REST Framework?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos02", "question": "What is the capital of Australia?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos03", "question": "How do I create a React component with hooks?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos04", "question": "How do I train a neural network in PyTorch?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos05", "question": "How do I use Spring Boot annotations for REST controllers?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos06", "question": "What is the best pizza topping?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos07", "question": "How do I read an EXPLAIN ANALYZE plan in PostgreSQL?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos08", "question": "How do I set up Tailwind CSS in a Next.js project?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos09", "question": "How do I deploy a Ruby on Rails app to Heroku?", "gold": [], "must_include": [], "type": "out_of_scope"}
+{"id": "oos10", "question": "How do I center a div with CSS grid?", "gold": [], "must_include": [], "type": "out_of_scope"}
