@@ -26,6 +26,8 @@ you are given.
 - Be concise. No preamble."""
 
 CITATION_RE = re.compile(r"\[(\d+)\]")
+# gpt-oss sometimes cites in its own format, e.g. 【2†L1-L9】
+ALT_CITATION_RE = re.compile(r"【(\d+)†[^】]*】")
 
 REWRITE = """Rewrite the user's question as a short search query for the FastAPI documentation.
 Use the terms the docs use (for example "request body", "path operation", "dependency",
@@ -37,9 +39,12 @@ class ConfigError(RuntimeError):
 
 
 def get_llm(s: Settings, **extra) -> BaseChatModel:
-    kwargs = {"model": s.llm_model, "temperature": s.llm_temperature, "max_retries": s.max_retries,
-              **extra}
+    kwargs = {"model": s.llm_model, "temperature": s.llm_temperature, "max_retries": s.max_retries}
     if s.llm_provider == "groq":
+        # gpt-oss "thinks" before answering; low effort roughly halves the tokens per question
+        if s.reasoning_effort and "gpt-oss" in s.llm_model:
+            kwargs["reasoning_effort"] = s.reasoning_effort
+        kwargs.update(extra)
         if not os.getenv("GROQ_API_KEY"):
             raise ConfigError("GROQ_API_KEY is not set, add it to .env")
         from langchain_groq import ChatGroq
@@ -48,7 +53,7 @@ def get_llm(s: Settings, **extra) -> BaseChatModel:
         if not os.getenv("OPENAI_API_KEY"):
             raise ConfigError("OPENAI_API_KEY is not set, add it to .env")
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(**kwargs)
+        return ChatOpenAI(**{**kwargs, **extra})
     raise ConfigError(f"unknown LLM_PROVIDER '{s.llm_provider}', use groq or openai")
 
 
@@ -77,7 +82,12 @@ def build_messages(question: str, sources: list[Source]) -> list:
             HumanMessage(f"Documentation excerpts:\n\n{context}\n\nQuestion: {question}")]
 
 
+def normalize_citations(answer: str) -> str:
+    return ALT_CITATION_RE.sub(r"[\1]", answer)
+
+
 def cited_numbers(answer: str, n_sources: int) -> list[int]:
+    answer = normalize_citations(answer)
     seen: list[int] = []
     for m in CITATION_RE.finditer(answer):
         n = int(m.group(1))

@@ -8,6 +8,12 @@ def test_cited_numbers_ignores_out_of_range_and_duplicates():
     assert cited_numbers("a [2] b [1][2] c [9]", n_sources=3) == [2, 1]
 
 
+def test_gpt_oss_citation_format_is_understood():
+    from docqa.generation import normalize_citations
+    assert cited_numbers("use overrides【2†L1-L9】 and【1†L3】", n_sources=3) == [2, 1]
+    assert normalize_citations("x【2†L1-L9】") == "x[2]"
+
+
 def test_refusal_detection():
     assert is_refusal(NOT_FOUND)
     assert is_refusal("Sorry. " + NOT_FOUND.rstrip("."))

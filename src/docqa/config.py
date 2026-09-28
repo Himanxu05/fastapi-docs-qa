@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     llm_model: str = "openai/gpt-oss-120b"
     llm_temperature: float = 0.0
     max_retries: int = 10
+    reasoning_effort: str | None = "low"  # only used for reasoning models (gpt-oss on groq)
 
     docs_repo: str = "https://github.com/fastapi/fastapi"
     docs_ref: str = "0.141.1"  # pinned so results are reproducible

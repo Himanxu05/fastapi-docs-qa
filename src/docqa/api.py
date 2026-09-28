@@ -35,9 +35,7 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(f"no index at {path}, run `docqa ingest` first")
     retriever = Retriever(Index.load(path), s)
     retriever.search("warm up the models", mode="rerank")
-    # rewriting is a tiny task, no need for the model to think long about it
-    rewrite_llm = get_llm(s, reasoning_effort="low") if s.llm_provider == "groq" else None
-    app.state.qa = QA(retriever, get_llm(s), s, rewrite_llm=rewrite_llm)
+    app.state.qa = QA(retriever, get_llm(s), s)
     log.info("loaded %d chunks", len(retriever.index.chunks))
     yield
 

@@ -4,6 +4,10 @@
     python eval/answer_eval.py --setups default no-rewrite
     python eval/answer_eval.py --judge          # also check faithfulness with an LLM judge
     python eval/answer_eval.py --limit 20       # quick run on a subset
+    python eval/answer_eval.py --fresh          # ignore saved progress
+
+Progress is saved after every question. If the provider's daily token limit is
+hit, the script stops; run the same command the next day and it continues.
 
 In-scope questions:
   correct      every `must_include` term appears in the answer
@@ -64,21 +68,42 @@ SETUPS = {
 }
 
 
+class DailyLimit(Exception):
+    pass
+
+
+def is_daily_limit(err: Exception) -> bool:
+    # per-minute limits are retried by the client; per-day ones mean "come back tomorrow"
+    text = str(err)
+    return "429" in text and ("per day" in text or "TPD" in text or "RPD" in text)
+
+
+def progress_file(s: Settings) -> Path:
+    return ROOT / "eval" / "results" / f"answers-progress-{s.llm_model.replace('/', '_')}.json"
+
+
 async def run(mode: str, questions: list[dict], s: Settings, retriever: Retriever,
-              use_judge: bool) -> dict:
+              use_judge: bool, progress: dict) -> dict:
+    """Answers every question, skipping ones already done in an earlier run.
+
+    `progress` is saved after each question, so hitting the daily token limit
+    halfway just means running the same command again the next day.
+    """
     cfg = s.model_copy(update=SETUPS[mode])
-    rewrite_llm = get_llm(cfg, reasoning_effort="low") if cfg.llm_provider == "groq" else None
-    qa = QA(retriever, get_llm(cfg), cfg, rewrite_llm=rewrite_llm)
+    qa = QA(retriever, get_llm(cfg), cfg)
     judge_llm = get_llm(cfg) if use_judge else None
-    rows = []
+    done: dict = progress.setdefault(mode, {})
     for q in questions:
+        if q["id"] in done:
+            continue
         t = time.perf_counter()
         try:
             out = await qa.ask(q["question"])
         except Exception as e:
-            rows.append({"id": q["id"], "type": q["type"], "error": str(e)[:300]})
+            if is_daily_limit(e):
+                raise DailyLimit(str(e)[:200]) from e
             print(f"  [{mode}] {q['id']} ERROR {str(e)[:120]}", flush=True)
-            continue
+            continue  # not saved, so it's retried next run
         cited_pages = {src["page"] for src in out["cited_sources"]}
         row = {
             "id": q["id"], "type": q["type"], "answer": out["answer"], "refused": out["refused"],
@@ -93,21 +118,22 @@ async def run(mode: str, questions: list[dict], s: Settings, retriever: Retrieve
                 row["faithful"] = v.supported
                 row["unsupported"] = v.unsupported_claims
             except Exception as e:
+                if is_daily_limit(e):
+                    raise DailyLimit(str(e)[:200]) from e
                 row["judge_error"] = str(e)[:200]
-        rows.append(row)
+        done[q["id"]] = row
+        progress_file(s).write_text(json.dumps(progress, indent=2))
         if q["type"] == "out_of_scope":
             status = "refused" if row["refused"] else "ANSWERED (should refuse)"
         else:
             status = f"correct={row['correct']!s:<5} cited_gold={row['cited_gold']!s:<5}" + (
                 " REFUSED" if row["refused"] else "")
         print(f"  [{mode}] {q['id']:<6} {status} {row['seconds']}s", flush=True)
-    return {"mode": mode, "rows": rows, "summary": summarize(rows)}
 
 
 def summarize(rows: list[dict]) -> dict:
-    ok = [r for r in rows if "error" not in r]
-    ins = [r for r in ok if r["type"] != "out_of_scope"]
-    oos = [r for r in ok if r["type"] == "out_of_scope"]
+    ins = [r for r in rows if r["type"] != "out_of_scope"]
+    oos = [r for r in rows if r["type"] == "out_of_scope"]
     judged = [r for r in ins if "faithful" in r]
 
     def pct(xs):
@@ -122,7 +148,6 @@ def summarize(rows: list[dict]) -> dict:
         "faithful (judge)": pct([r["faithful"] for r in judged]),
         "median first token ms": statistics.median(
             [r["first_token_ms"] for r in ins if r["first_token_ms"]] or [0]),
-        "errors": len(rows) - len(ok),
         "n in-scope": len(ins), "n out-of-scope": len(oos),
     }
 
@@ -133,6 +158,7 @@ async def main() -> None:
     ap.add_argument("--setups", nargs="+", default=["default"], choices=list(SETUPS))
     ap.add_argument("--judge", action="store_true")
     ap.add_argument("--limit", type=int, help="only the first N in-scope + all out-of-scope")
+    ap.add_argument("--fresh", action="store_true", help="ignore saved progress, start over")
     args = ap.parse_args()
 
     questions = [json.loads(line) for line in (ROOT / "eval" / "questions.jsonl").open()]
@@ -143,28 +169,44 @@ async def main() -> None:
     s = Settings()
     retriever = Retriever(Index.load(s.index_dir / "heading"), s,
                           embedder=load_embedder(s.embed_model))
+    pf = progress_file(s)
+    pf.parent.mkdir(exist_ok=True)
+    progress = json.loads(pf.read_text()) if pf.exists() and not args.fresh else {}
     print(f"model {s.llm_provider}/{s.llm_model}, reranker {s.rerank_model}, "
-          f"{len(questions)} questions\n")
-    results = [await run(m, questions, s, retriever, args.judge) for m in args.setups]
+          f"{len(questions)} questions, progress file {pf.relative_to(ROOT)}\n")
 
-    print("\n| setup | answered correctly | cited a gold page | wrongly refused "
-          "| out-of-scope refused | faithful (judge) | median first token |")
-    print("|---|---|---|---|---|---|---|")
-    for r in results:
-        x = r["summary"]
+    stopped = None
+    for m in args.setups:
+        try:
+            await run(m, questions, s, retriever, args.judge, progress)
+        except DailyLimit as e:
+            stopped = str(e)
+            break
+
+    wanted = {q["id"] for q in questions}
+    print("\n| setup | scored | answered correctly | cited a gold page | wrongly refused "
+          "| out-of-scope refused | refused before LLM | median first token |")
+    print("|---|---|---|---|---|---|---|---|")
+    summaries = {}
+    for m in args.setups:
+        rows = [r for qid, r in progress.get(m, {}).items() if qid in wanted]
+        x = summaries[m] = summarize(rows)
 
         def f(v):
             return "-" if v is None else f"{v:.0%}"
-        print(f"| {r['mode']} | {f(x['answered correctly'])} | {f(x['cited a gold page'])} "
-              f"| {f(x['wrongly refused'])} | {f(x['out-of-scope refused'])} "
-              f"| {f(x['faithful (judge)'])} | {x['median first token ms']:.0f} ms |")
+        print(f"| {m} | {len(rows)}/{len(questions)} | {f(x['answered correctly'])} "
+              f"| {f(x['cited a gold page'])} | {f(x['wrongly refused'])} "
+              f"| {f(x['out-of-scope refused'])} | {x['refused without LLM call']}/"
+              f"{x['n out-of-scope']} | {x['median first token ms']:.0f} ms |")
 
-    out = ROOT / "eval" / "results"
-    out.mkdir(exist_ok=True)
-    path = out / f"answers-{time.strftime('%Y%m%d-%H%M%S')}.json"
-    path.write_text(json.dumps({"model": f"{s.llm_provider}/{s.llm_model}",
-                                "results": results}, indent=2))
-    print(f"\nsaved {path.relative_to(ROOT)}")
+    if stopped:
+        print(f"\nStopped: the provider's daily token limit was reached ({stopped[:120]}...).")
+        print("Progress is saved. Run the same command again after the limit resets to continue.")
+    else:
+        out = ROOT / "eval" / "results" / f"answers-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        out.write_text(json.dumps({"model": f"{s.llm_provider}/{s.llm_model}",
+                                   "summaries": summaries, "rows": progress}, indent=2))
+        print(f"\nsaved {out.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

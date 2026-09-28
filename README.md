@@ -135,8 +135,29 @@ Of the 10 out-of-scope questions, 4 were stopped by the relevance check without 
 other 6 (Django, Rails, Spring Boot, React, PyTorch, pizza) reached the LLM and it declined to answer. The
 split varies a little between runs because the query rewrite is generated fresh each time.
 
-Median time to first token was about 6 s, most of it waiting on Groq free-tier rate limits. A full
-60-question run is still to do.
+Median time to first token was about 6 s, most of it waiting on Groq free-tier rate limits.
+
+Second run with `openai/gpt-oss-120b` (default reasoning effort). Groq's free tier allows 200k tokens a day,
+and the run hit that limit after 25 questions:
+
+| setup | scored | answered correctly | cited a gold page | wrongly refused |
+|---|---|---|---|---|
+| default | 25/60 | 24/25 | 22/25 | 0/25 |
+
+What went wrong, and what changed because of it:
+- **q05, q16:** correct answers that didn't cite properly. q05 had no citations at all. q16 cited as
+  `【2†L1-L9】`, gpt-oss's own format, which the parser didn't recognise. Both formats are now understood.
+- **q01:** a weaker answer that cited the wrong page. The query rewrite is generated fresh on every run, and
+  this time it steered retrieval elsewhere.
+- **no-rewrite:** most calls failed on the rate limit, but three valid questions (q03, q09, q53) were
+  refused by the relevance check before reaching the LLM. The threshold was tuned with rewriting on, so
+  turning rewriting off makes the check too strict. The two settings have to be tuned together.
+- **Token use:** gpt-oss spends most of its tokens reasoning before it answers. `REASONING_EFFORT=low`
+  (now the default) roughly halves the tokens per question.
+- **The eval script:** it now saves progress after every question and stops cleanly at the daily limit,
+  so a full run can be finished over two days by re-running the same command.
+
+A full 70-question run is still to do.
 
 ## Tests
 

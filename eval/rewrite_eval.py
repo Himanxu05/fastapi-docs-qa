@@ -32,7 +32,7 @@ async def get_rewrites(questions: list[dict], s: Settings) -> dict[str, str]:
     cache = ROOT / "eval" / "results" / f"rewrites-{s.llm_model.replace('/', '_')}.json"
     cache.parent.mkdir(exist_ok=True)
     done = json.loads(cache.read_text()) if cache.exists() else {}
-    llm = get_llm(s, reasoning_effort="low") if s.llm_provider == "groq" else get_llm(s)
+    llm = get_llm(s)
     for q in questions:
         if q["id"] not in done:
             done[q["id"]] = await rewrite_query(llm, q["question"])

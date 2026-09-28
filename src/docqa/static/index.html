@@ -66,6 +66,8 @@ for (const ex of examples) {
 
 function render(text, sources) {
   const byN = Object.fromEntries(sources.map(s => [s.n, s]));
+  // gpt-oss sometimes writes 【2†L1-L9】 instead of [2]
+  text = text.replace(/【(\d+)†[^】]*】/g, "[$1]");
   let html = DOMPurify.sanitize(marked.parse(text));
   return html.replace(/\[(\d+)\]/g, (m, n) =>
     byN[n] ? `<a class="cite" href="${byN[n].url}" target="_blank" title="${byN[n].section}">[${n}]</a>` : m);

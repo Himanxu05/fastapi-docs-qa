@@ -10,8 +10,8 @@ from typing import Any
 from langchain_core.language_models import BaseChatModel
 
 from .config import Settings
-from .generation import (NOT_FOUND, cited_numbers, is_refusal, make_sources, rewrite_query,
-                         stream_answer)
+from .generation import (NOT_FOUND, cited_numbers, is_refusal, make_sources,
+                         normalize_citations, rewrite_query, stream_answer)
 from .retrieval import Retriever
 
 
@@ -92,6 +92,7 @@ class QA:
                 out["answer"] += data
             else:
                 out.update(data)
+        out["answer"] = normalize_citations(out["answer"])
         cited = set(out.get("cited", []))
         out["cited_sources"] = [src for src in out.get("sources", []) if src["n"] in cited]
         return out
